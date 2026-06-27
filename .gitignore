@@ -1,6 +1,2 @@
 # Generated keys + ledgers are sensitive — never commit them.
 out/
-
-# Google Sheets credentials / config (secrets) — never commit.
-service_account.json
-sheets.config.json
