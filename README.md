@@ -62,6 +62,7 @@ summary. Run any time.
 | `--batch NAME` | `batch-<UTC ts>` | label (-> DB `notes` + CSV `batch` column) |
 | `--apply` | off | also INSERT into D1 |
 | `--reconcile` | off | sync the ledger with D1 (no generation) |
+| `--export-sql` | off | regenerate per-batch `.sql` files in `out/` from the ledger (no DB) |
 | `--local` | off | use the local dev D1 instead of `--remote` |
 | `--no-db-check` | off | skip the D1 uniqueness query (ledger-only; offline) |
 | `--db NAME` | `codegnito-backend-apac` | D1 database name |

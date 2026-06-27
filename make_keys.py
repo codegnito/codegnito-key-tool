@@ -15,6 +15,7 @@ USAGE (run from this folder):
     python make_keys.py 10 --apply --local        # against the LOCAL dev D1
     python make_keys.py 50 --batch march-promo --apply
     python make_keys.py --reconcile    # sync ledger with D1 (status + import manual keys)
+    python make_keys.py --export-sql   # rebuild per-batch .sql files in out/ from the ledger
     python make_keys.py 500 --no-db-check         # skip the D1 dedupe (ledger-only; offline)
 
 OUTPUTS (in ./out):
@@ -60,6 +61,8 @@ def parse_args():
     p.add_argument('--apply', action='store_true', help='also INSERT the keys into D1')
     p.add_argument('--local', action='store_true', help='use the local dev D1 instead of remote')
     p.add_argument('--reconcile', action='store_true', help='sync the ledger with D1 (no generation)')
+    p.add_argument('--export-sql', dest='export_sql', action='store_true',
+                   help='regenerate per-batch .sql files from the ledger (no generation / no DB)')
     p.add_argument('--no-db-check', dest='no_db_check', action='store_true',
                    help='skip the D1 uniqueness query (dedupe vs the ledger only)')
     p.add_argument('--batch', default=None, help='batch label (default batch-<timestamp>)')
@@ -130,6 +133,15 @@ def iso(unix):
     return datetime.fromtimestamp(int(unix), tz=timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
 
 
+def iso_to_unix(s):
+    if not s:
+        return int(datetime.now(timezone.utc).timestamp())
+    try:
+        return int(datetime.strptime(s, '%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=timezone.utc).timestamp())
+    except Exception:
+        return int(datetime.now(timezone.utc).timestamp())
+
+
 # ── RECONCILE: sync ledger with D1 (update status + import any DB-only keys) ──
 if A.reconcile:
     rows = load_ledger()
@@ -174,6 +186,29 @@ if A.reconcile:
     print(f'\nOK: Ledger synced with D1: {MASTER}')
     print(f'  total {len(rows)} |activated {used} |unused {unused} |'
           f'marked-shared {shared} |imported-from-DB {imported} |in-ledger-not-in-DB {missing}')
+    sys.exit(0)
+
+
+# ── EXPORT-SQL: regenerate per-batch .sql files from the ledger (into out/) ──
+if A.export_sql:
+    rows = load_ledger()
+    if not rows:
+        print('ERROR: ledger is empty — nothing to export. Run --reconcile first.'); sys.exit(1)
+    OUT.mkdir(parents=True, exist_ok=True)
+    groups = {}
+    for r in rows:
+        groups.setdefault(r.get('batch') or 'unknown', []).append(r)
+    esc = lambda s: str(s).replace("'", "''")
+    for b, rs in sorted(groups.items()):
+        safe = re.sub(r'[^A-Za-z0-9._-]', '_', b) or 'unknown'
+        path = OUT / f'keys-{safe}.sql'
+        with open(path, 'w', encoding='utf-8') as f:
+            for r in rs:
+                dur = r.get('duration_days') or 30
+                f.write("INSERT OR IGNORE INTO activation_keys (key, duration_days, created_at, used, notes) "
+                        f"VALUES ('{esc(r['key'])}', {dur}, {iso_to_unix(r.get('created_at'))}, 0, '{esc(b)}');\n")
+        print(f'  {path}  ({len(rs)} keys)')
+    print(f'OK: wrote {len(groups)} batch .sql file(s) into {OUT} from {len(rows)} ledger keys.')
     sys.exit(0)
 
 
