@@ -1,0 +1,6 @@
+{
+  "_comment": "Copy this to sheets.config.json (git-ignored) and fill in your Sheet ID. Leave service_account.json next to this file. See README -> Google Sheets sync.",
+  "sheet_id": "PASTE_SHEET_ID_FROM_THE_URL",
+  "service_account_file": "service_account.json",
+  "worksheet": "Keys"
+}

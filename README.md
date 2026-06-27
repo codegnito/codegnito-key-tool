@@ -19,6 +19,35 @@ only with `--no-db-check`.
 existing keys (e.g. your 13 manual ones) into the ledger CSV so everything is
 tracked in one place.
 
+## Google Sheets sync (recommended — your live tracker)
+
+With this set up, `--apply` appends new keys straight into your Google Sheet,
+and `--reconcile` updates each key's used/calls columns there — so you manage
+everything from the Sheet (web or phone): filter "Available", copy a key, send
+it on WhatsApp, set Status = Shared. Optional: works fine without it (CSV mode).
+
+**One-time setup**
+
+1. **Create a Google Sheet.** Copy its ID from the URL:
+   `https://docs.google.com/spreadsheets/d/`**`<SHEET_ID>`**`/edit`
+2. **Google Cloud** (console.cloud.google.com):
+   - Create/select a project → **APIs & Services → Library → enable "Google Sheets API"**.
+   - **Credentials → Create credentials → Service account** → create.
+   - Open it → **Keys → Add key → JSON** → download. Save as `key-tool/service_account.json`.
+3. **Share the Sheet** with the service account's email (the `client_email` in
+   that JSON, e.g. `xxx@yyy.iam.gserviceaccount.com`) as **Editor**.
+4. `pip install -r requirements.txt`   (installs gspread)
+5. Copy `sheets.config.example.json` → `sheets.config.json`, paste your `sheet_id`.
+6. `python make_keys.py --reconcile`   → pushes all existing keys into the Sheet.
+
+`service_account.json` and `sheets.config.json` are git-ignored (secrets).
+
+**Make the Sheet friendly** (one-time, in the Sheet UI): freeze row 1; on the
+`status` column add a dropdown (Data → Data validation: `Available, Shared, Used`)
+and conditional formatting (green/yellow/red); create a Filter view for
+`status = Available`. Then on a WhatsApp request: open the Sheet → Available
+filter → copy a key → set its `status`/`shared_to`/`shared_date`.
+
 ## Generate (review only — does NOT touch the DB)
 
 ```powershell
